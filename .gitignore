@@ -21,3 +21,5 @@ reproduce_original_data/second_parameter_sweep_data
 
 
 dump/
+
+fisher_diagnostics/reproduction_data

@@ -1,12 +1,8 @@
-# Resource-Free Quantum Hamiltonian Learning Below the Standard Quantum Limit
-
-## Abstract
-
-Accurate and resource-efficient estimation of quantum Hamiltonians is crucial for developing practical quantum technologies, yet current methods typically demand entanglement resources or dynamical control. Here, we demonstrate a method that surpasses the standard quantum limit without requiring entanglement resources, coherent measurements, or dynamical control. Our method relies on trajectory-based Hamiltonian learning, in which we apply local, randomized pre-processing to probe states and apply maximum-likelihood estimation to optimally scheduled Pauli measurements. Analytically, we establish the emergence of a transient Heisenberg-limited regime for short-time probes for our procedure. Furthermore, we outline how to estimate all Hamiltonian parameters in parallel using ensembles of probe states, removing the need for parameter isolation and structural priors. Finally, we supplement our findings with a numerical study, learning multiple disordered, anisotropic Heisenberg models for a 1D chain of spin-1/2 particles, featuring local transverse fields with both nearest- and next-nearest-neighbour interactions, as well as a gapless XXZ Hamiltonian. Importantly, our numerics show that our method needs only one shot per Pauli measurement, making it well-suited for experimental scenarios. The code for our method is available online and open-source.
+# Heisenberg-Limited Quantum Hamiltonian Learning \\ via Randomly Spread Product-States
 
 ---
 
-This repository provides the code and data for the Hamiltonian learning strategy introduced in our publication. It includes:
+This repository provides the code and data for the Hamiltonian learning strategy introduced in our publication, including both Hamiltonian recovery experiments and Fisher-information diagnostics validating the theoretical scaling predictions.
 
 1. **Original (“publication”) data** (`replot_original_data/`)  
    Scripts under `replot_original_data/` that contain the _original_ data folders and produce all plots exactly as in the publication:  
@@ -41,6 +37,28 @@ This repository provides the code and data for the Hamiltonian learning strategy
    - `plotting_utils.py`, `plotting_pipelines.py` – collect & plot errors, compute β, draw Fisher‐regime figures  
    - `reproduction_pipelines.py` – functions to re‐generate all sweeps  
 
+
+4. **Fisher‐information diagnostics** (`fisher_diagnostics/`)  
+   This directory contains the scripts used to compute and visualize the Fisher-information diagnostics discussed in the paper. These diagnostics analyse the Fisher information of the measurement statistics directly, independently of the Hamiltonian reconstruction procedure.
+
+   The purpose of these diagnostics is to verify that the scaling behaviour observed in the recovery experiments originates from the intrinsic information content of the measurement statistics rather than from numerical properties of the reconstruction algorithm.
+
+   In particular, the Fisher diagnostics:
+
+   - compute the classical Fisher information from simulated measurement probabilities,
+   - analyse the scaling of the Fisher trace  
+     \(\mathrm{Tr}\,\mathcal I(T_{\rm tot}) \propto T_{\rm tot}^{p}\),
+   - verify the predicted cumulative Fisher scaling \(p=(\alpha\gamma_0+1)/(\alpha+1)\),
+   - demonstrate that the quadratic short-time Fisher-information regime is already present with a single spread state when averaging over sufficiently many measurement bases.
+
+   The scripts in this directory generate the Fisher-diagnostic figures reported in the paper, including:
+
+   - Fisher trace vs total experiment time \(T_{\rm tot}\) for different spread-state ensemble sizes \(R\),
+   - fitted Fisher scaling exponent \(p\) vs \(R\),
+   - fitted Fisher scaling exponent \(p\) vs scheduling parameter \(\alpha\).
+
+   These diagnostics complement the Hamiltonian recovery experiments by validating the theoretical Fisher-information scaling directly at the level of the measurement statistics.
+   
 ---
 
 ## Requirements
