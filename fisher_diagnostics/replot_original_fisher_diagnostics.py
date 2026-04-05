@@ -6,7 +6,8 @@ Replots the Fisher-information diagnostic figures from the original
 datasets included with the repository.
 
 This script visualizes the Fisher-information diagnostic data used in the
-analysis of the cumulative Fisher scaling behaviour. The data were
+analysis of both the cumulative Fisher-scaling behaviour and the
+diagonalization of the Fisher information matrix. The data were
 generated once and stored in the repository under the accompanying
 ``data/`` directory. The script loads these datasets and reproduces the
 diagnostic plots used in the investigation.
@@ -18,7 +19,7 @@ the archived datasets distributed with the code base.
 Generated figures
 -----------------
 
-The script produces three diagnostic plots:
+The script produces five diagnostic plots:
 
 1. **Fisher trace scaling vs total experiment time**
 
@@ -68,6 +69,43 @@ The script produces three diagnostic plots:
 
    Data from all Hamiltonian families are shown together.
 
+4. **Fisher trace scaling vs total experiment time for varying qubit number**
+
+   Displays the scaling of the Fisher-information trace
+
+       Tr(I)
+
+   as a function of the total experiment time
+
+       T_tot = Σ_k t_k
+
+   for different system sizes n, while keeping the spread-state ensemble
+   size fixed at R=1 and the scheduling exponent fixed at α=1.
+
+   Each curve corresponds to one qubit number and is fitted with a power
+   law
+
+       Tr(I) = A T_tot^p.
+
+   This plot is generated for a **single selected Hamiltonian family**
+   (specified via ``--family``).
+
+5. **Fisher-matrix diagonalization vs spread-state ensemble size**
+
+   Displays the diagonalization measure
+
+       η_diag = ||diag(I)||_F^2 / ||I||_F^2
+
+   as a function of the number of spread states
+
+       R
+
+   for different system sizes n.
+
+   This plot visualizes how increasing the spread-state ensemble
+   suppresses off-diagonal Fisher-information couplings and makes the
+   Fisher matrix progressively closer to diagonal.
+
 Data discovery
 --------------
 
@@ -78,9 +116,11 @@ The script searches the local ``data/`` directory for files of the form
 and automatically determines whether they belong to:
 
 • fixed-α / varying-R experiments  
-• fixed-R=1 / varying-α experiments
+• fixed-R=1 / varying-α experiments  
+• fixed-R=1 / fixed-α / varying-qubit experiments  
+• fixed-α / varying-R / varying-qubit experiments
 
-based on the structure of the stored data.
+based on the directory structure and the stored data.
 
 Usage
 -----
@@ -89,7 +129,8 @@ Run the script from the directory containing the archived datasets:
 
     python replot_original_fisher_diagnostics.py
 
-Optionally specify the Hamiltonian family used for the first plot:
+Optionally specify the Hamiltonian family used for the family-specific
+plots:
 
     python replot_original_fisher_diagnostics.py --family XYZ
 
@@ -100,9 +141,11 @@ Figures are displayed interactively and are not written to disk.
 This script allows the original diagnostic figures to be reproduced
 directly from the archived datasets without regenerating the data.
 """
+
 import os
 import glob
 import json
+import re
 import argparse
 from typing import Dict, Any, List, Tuple
 
@@ -125,32 +168,19 @@ FAMILY_COLORS = {
 }
 
 plt.rcParams.update({
-
-    # ---------- Fonts ----------
     "font.size": 20,
     "axes.labelsize": 20,
     "axes.titlesize": 20,
     "xtick.labelsize": 16,
     "ytick.labelsize": 16,
     "legend.fontsize": 15,
-
-    # ---------- Lines ----------
     "lines.linewidth": 2,
     "lines.markersize": 8,
-
-    # ---------- Figure ----------
-    #"figure.figsize": (8, 7),
     "figure.dpi": 100,
-
-    # ---------- Tick style ----------
     "xtick.direction": "in",
     "ytick.direction": "in",
-
-    # ---------- Legend ----------
     "legend.frameon": True,
     "legend.framealpha": 0.9,
-
-    # ---------- Savefig ----------
     "savefig.bbox": "tight",
     "savefig.pad_inches": 0.02,
 })
@@ -192,6 +222,36 @@ def classify_results(
             fixed_R1_vary_alpha[family] = data
 
     return fixed_alpha_vary_R, fixed_R1_vary_alpha
+
+
+def load_qubit_sweep_results(data_dir: str) -> Dict[int, Dict[str, Any]]:
+    """
+    Load qubit-sweep Fisher diagnostic results.
+
+    Expects subfolders somewhere below data_dir named like:
+        2_qubits, 3_qubits, ..., 8_qubits
+    each containing one combined JSON:
+        fisher_trace_scaling_*_all_alphas.json
+    """
+    out: Dict[int, Dict[str, Any]] = {}
+
+    for root, dirs, _ in os.walk(data_dir):
+        for d in dirs:
+            m = re.match(r"(\d+)_qubits$", d)
+            if not m:
+                continue
+
+            n = int(m.group(1))
+            subdir = os.path.join(root, d)
+            candidates = sorted(
+                glob.glob(os.path.join(subdir, "fisher_trace_scaling_*_all_alphas.json"))
+            )
+            if not candidates:
+                continue
+
+            out[n] = load_json(candidates[0])
+
+    return out
 
 
 def fit_prefactor(xs: np.ndarray, ys: np.ndarray, p: float) -> float:
@@ -265,8 +325,8 @@ def plot_trace_vs_time_for_family(all_results: Dict[str, Any]) -> None:
     ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
     ax.legend(fontsize=12)
     fig.tight_layout()
-    #plt.savefig("Figure_FisherTraceScaling_XYZ.png", dpi=200, bbox_inches="tight")
     plt.show()
+
 
 def plot_p_vs_R_across_families(family_results: Dict[str, Dict[str, Any]]) -> None:
     if not family_results:
@@ -327,7 +387,6 @@ def plot_p_vs_R_across_families(family_results: Dict[str, Dict[str, Any]]) -> No
             data_handles.append(eb)
             data_labels.append(family)
 
-    # Theory reference line
     theory_line = ax.axhline(
         1.5,
         linestyle=":",
@@ -336,7 +395,6 @@ def plot_p_vs_R_across_families(family_results: Dict[str, Dict[str, Any]]) -> No
         label=r"$p=3/2$"
     )
 
-    # Data legend (upper left)
     data_legend = ax.legend(
         handles=data_handles,
         labels=data_labels,
@@ -346,7 +404,6 @@ def plot_p_vs_R_across_families(family_results: Dict[str, Dict[str, Any]]) -> No
     )
     ax.add_artist(data_legend)
 
-    # Theory legend (lower right)
     ax.legend(
         handles=[theory_line],
         fontsize=13,
@@ -363,7 +420,6 @@ def plot_p_vs_R_across_families(family_results: Dict[str, Dict[str, Any]]) -> No
     ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
 
     fig.tight_layout()
-    #plt.savefig("Figure_FisherExponent_vs_R_XYZ.png", dpi=200, bbox_inches="tight")
     plt.show()
 
 
@@ -473,16 +529,7 @@ def plot_p_r1_vs_alpha_across_families(
         alpha=0.7,
         label=r"SQL: $p=1$",
     )
-    #heis_line = ax.axhline(
-    #    2.0,
-    #    color="gray",
-    #    linestyle="--",
-    #    linewidth=1.5,
-    #    alpha=0.7,
-    #    label=r"$p=2$",
-    #)
 
-    # Data legend in upper left
     data_legend = ax.legend(
         handles=data_handles,
         labels=data_labels,
@@ -492,11 +539,10 @@ def plot_p_r1_vs_alpha_across_families(
     )
     ax.add_artist(data_legend)
 
-    # Theory/reference legend in lower right
     theory_handles = []
     if theory_main is not None:
         theory_handles.append(theory_main)
-    theory_handles.extend([sql_line])#, heis_line])
+    theory_handles.extend([sql_line])
 
     ax.legend(
         handles=theory_handles,
@@ -512,23 +558,270 @@ def plot_p_r1_vs_alpha_across_families(
     ax.grid(True, which="major", linestyle="-", linewidth=0.5, alpha=0.7)
     ax.grid(True, which="minor", linestyle="--", linewidth=0.5, alpha=0.6)
     fig.tight_layout()
-    #plt.savefig("Figure_FisherExponent_vs_Alpha_R1_XYZ.png", dpi=200, bbox_inches="tight")
     plt.show()
 
 
+def plot_trace_vs_time_for_varying_qubits(
+    qubit_results: Dict[int, Dict[str, Any]],
+    family: str = "XYZ",
+) -> None:
+    """
+    Plot Tr(I) vs total experiment time for varying numbers of qubits.
+    Assumes fixed R=1 and fixed alpha in each run.
+    """
+    if not qubit_results:
+        print("No qubit-sweep Fisher results found.")
+        return
+
+    qubit_list = sorted(qubit_results.keys())
+    #cmap = plt.cm.viridis(np.linspace(0, 1, len(qubit_list)))
+    cmap = plt.cm.tab10(np.linspace(0, 1, len(qubit_list)))
+    markers = ["o", "s", "D", "^", "v", "P", "X", "*", "<", ">"]
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+
+    alpha = None
+
+    for i, n in enumerate(qubit_list):
+        all_results = qubit_results[n]
+        alpha_key = sorted(all_results["alphas"].keys(), key=float)[0]
+        alpha = float(alpha_key)
+
+        results_for_alpha = all_results["alphas"][alpha_key]
+        entry = results_for_alpha["data"].get("1", None)
+
+        if entry is None:
+            continue
+
+        xs = np.array(entry["T_tot"], dtype=float)
+        ys = np.array(entry["trace_fisher"], dtype=float)
+        p_fit = entry.get("p", np.nan)
+        delta_p = entry.get("delta_p", np.nan)
+
+        order = np.argsort(xs)
+        xs = xs[order]
+        ys = ys[order]
+
+        color = cmap[i]
+        marker = markers[i % len(markers)]
+
+        ax.scatter(
+            xs,
+            ys,
+            s=80,
+            color=color,
+            marker=marker,
+            edgecolor="black",
+            zorder=3,
+        )
+
+        if np.isfinite(p_fit):
+            a_fit = fit_prefactor(xs, ys, p_fit)
+            x_fit = np.linspace(xs.min(), xs.max(), 300)
+            y_fit = a_fit * (x_fit ** p_fit)
+
+            if np.isfinite(delta_p):
+                label = fr"$n={n}$, $p={p_fit:.3f}\pm{delta_p:.1e}$"
+            else:
+                label = fr"$n={n}$, $p={p_fit:.3f}$"
+
+            ax.plot(
+                x_fit,
+                y_fit,
+                "--",
+                color=color,
+                linewidth=2,
+                label=label,
+            )
+        else:
+            ax.plot(
+                xs,
+                ys,
+                "--",
+                color=color,
+                linewidth=2,
+                label=fr"$n={n}$",
+            )
+
+    ax.set_xlabel(r"Total experiment time $T_{\rm tot}$")
+    ax.set_ylabel(r"Trace Fisher information $\mathrm{Tr}(I_C)$")
+    ax.set_title(rf"Fisher trace vs $T_{{\rm tot}}$ for qubit number ($R=1$,$\alpha={alpha}$)")
+    ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+    ax.legend(fontsize=12)
+    fig.tight_layout()
+    plt.savefig("Figure_FisherTraceScaling_vary_qubits.png", dpi=200)
+    plt.show()
+    
+def extract_eta_vs_R(
+    all_results: Dict[str, Any],
+    alpha: float = 1.0,
+    use_last_point: bool = True,
+) -> Dict[int, float]:
+    """
+    Extract eta_diag as a function of R from one combined JSON result.
+
+    If multiple eta values exist across n_steps, use either:
+    - the last point (default), or
+    - the mean over points.
+    """
+    alpha_key = str(alpha)
+    if alpha_key not in all_results["alphas"]:
+        alpha_key = sorted(all_results["alphas"].keys(), key=float)[0]
+
+    results_for_alpha = all_results["alphas"][alpha_key]
+    out = {}
+
+    for R_str, entry in results_for_alpha["data"].items():
+        eta_vals = entry.get("eta_diag", None)
+        if eta_vals is None:
+            continue
+
+        eta_vals = np.asarray(eta_vals, dtype=float)
+        eta_vals = eta_vals[np.isfinite(eta_vals)]
+        if eta_vals.size == 0:
+            continue
+
+        if use_last_point:
+            out[int(R_str)] = float(eta_vals[-1])
+        else:
+            out[int(R_str)] = float(np.mean(eta_vals))
+
+    return out
+    
+def plot_eta_diag_vs_R_for_varying_qubits(
+    qubit_results: Dict[int, Dict[str, Any]],
+    family: str = "XYZ",
+    alpha: float = 1.0,
+) -> None:
+    """
+    Plot eta_diag vs R for different qubit numbers.
+    Assumes fixed alpha and varying spread-state ensemble size R.
+    """
+    if not qubit_results:
+        print("No qubit-sweep diagonalization results found.")
+        return
+
+    qubit_list = sorted(qubit_results.keys())
+    cmap = plt.cm.tab10(np.linspace(0, 1, len(qubit_list)))
+    markers = ["o", "s", "D", "^", "v", "P", "X", "*", "<", ">"]
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+    ax.set_xscale("log")
+
+    all_Rs = set()
+
+    for i, n in enumerate(qubit_list):
+        eta_by_R = extract_eta_vs_R(qubit_results[n], alpha=alpha, use_last_point=True)
+        if not eta_by_R:
+            continue
+
+        Rs = np.array(sorted(eta_by_R.keys()), dtype=float)
+        etas = np.array([eta_by_R[int(R)] for R in Rs], dtype=float)
+
+        all_Rs.update(Rs.tolist())
+
+        color = cmap[i]
+        marker = markers[i % len(markers)]
+
+        ax.scatter(
+            Rs,
+            etas,
+            s=90,
+            color=color,
+            marker=marker,
+            edgecolor="black",
+            zorder=3,
+        )
+        ax.plot(
+            Rs,
+            etas,
+            "--",
+            color=color,
+            linewidth=2,
+            label=fr"$n={n}$",
+        )
+
+    all_Rs = sorted(set(int(r) for r in all_Rs))
+    ax.set_xticks(all_Rs)
+    ax.set_xticklabels([str(r) for r in all_Rs])
+
+    ax.set_xlabel(r"Number of spread states $R$")
+    ax.set_ylabel(r"Diagonalization measure $\eta_{\mathrm{diag}}$")
+    ax.set_title(rf"Fisher-matrix diagonalization vs $R$ ($\alpha={alpha}$)")
+    ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+    ax.legend(fontsize=12)
+    fig.tight_layout()
+    plt.savefig("Figure_FisherDiagonalization_vs_R.png", dpi=200)
+    plt.show()
+
+def load_qubit_sweep_results_for_family(data_dir: str, family: str) -> Dict[int, Dict[str, Any]]:
+    """
+    Load qubit-sweep Fisher diagnostic results for one family.
+
+    Expects subfolders somewhere below data_dir named like:
+        2_qubits, 3_qubits, ..., 8_qubits
+    each containing:
+        fisher_trace_scaling_<family>_all_alphas.json
+    """
+    out: Dict[int, Dict[str, Any]] = {}
+    target_name = f"fisher_trace_scaling_{family}_all_alphas.json"
+
+    for root, dirs, _ in os.walk(data_dir):
+        for d in dirs:
+            m = re.match(r"(\d+)_qubits$", d)
+            if not m:
+                continue
+
+            n = int(m.group(1))
+            subdir = os.path.join(root, d)
+            candidate = os.path.join(subdir, target_name)
+
+            if os.path.isfile(candidate):
+                out[n] = load_json(candidate)
+
+    return out
+
 def plot_from_data_dir(data_dir: str, family: str) -> None:
-    json_paths = discover_combined_jsons(data_dir)
-    fixed_alpha_vary_R, fixed_R1_vary_alpha = classify_results(json_paths)
+    # -------- Experiment A --------
+    expA_root = os.path.join(data_dir, "expA_fixed_alpha_vary_R")
+    expA_paths = discover_combined_jsons(expA_root)
+    fixed_alpha_vary_R, _ = classify_results(expA_paths)
 
     if family not in fixed_alpha_vary_R:
         raise ValueError(
-            f"Family '{family}' not found in fixed-alpha-vary-R results. "
+            f"Family '{family}' not found in Experiment A results. "
             f"Available: {sorted(fixed_alpha_vary_R.keys())}"
         )
 
     plot_trace_vs_time_for_family(fixed_alpha_vary_R[family])
     plot_p_vs_R_across_families(fixed_alpha_vary_R)
+
+    # -------- Experiment B --------
+    expB_root = os.path.join(data_dir, "expB_fixed_R1_vary_alpha")
+    expB_paths = discover_combined_jsons(expB_root)
+    _, fixed_R1_vary_alpha = classify_results(expB_paths)
+
     plot_p_r1_vs_alpha_across_families(fixed_R1_vary_alpha)
+
+    # -------- Experiment C --------
+    expC_root = os.path.join(data_dir, "expC_vary_qubits")
+    if os.path.isdir(expC_root):
+        qubit_results = load_qubit_sweep_results_for_family(expC_root, family=family)
+        if qubit_results:
+            plot_trace_vs_time_for_varying_qubits(qubit_results, family=family)
+
+    # -------- Experiment D --------
+    expD_root = os.path.join(data_dir, "expD_diagonalization_vary_qubits_and_R")
+    if os.path.isdir(expD_root):
+        qubit_diag_results = load_qubit_sweep_results_for_family(expD_root, family=family)
+        if qubit_diag_results:
+            plot_eta_diag_vs_R_for_varying_qubits(
+                qubit_diag_results,
+                family=family,
+                alpha=1.0,
+            )
 
 
 def main():

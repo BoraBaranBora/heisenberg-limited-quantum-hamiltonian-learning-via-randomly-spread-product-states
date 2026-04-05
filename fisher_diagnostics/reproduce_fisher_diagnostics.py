@@ -123,9 +123,7 @@ def main():
     ensure_dir(output_root, clean=False)
 
     common = dict(
-        num_qubits=5,
         delta_t=0.01,
-        steps=[2, 4, 6, 8, 10],
         measurements=25,
         shots=1,
         seed=99901,
@@ -139,12 +137,14 @@ def main():
     expA_root = os.path.join(output_root, "expA_fixed_alpha_vary_R")
     os.makedirs(expA_root, exist_ok=True)
 
-    print("==================== Fisher Diagnostics Run 1/2 ====================")
+    print("==================== Fisher Diagnostics Run 1/4 ====================")
     for family in families:
         family_out = os.path.join(expA_root, family)
         ensure_dir(family_out, clean=True)
 
         run_fisher_diagnostic(
+            steps=[2, 4, 6, 8, 10],
+            num_qubits=5,
             family=family,
             alphas=[1.0],
             spreadings=[1, 2, 4, 8, 16],
@@ -152,7 +152,7 @@ def main():
             **common,
         )
         
-    print("==================== Fisher Diagnostics Run 2/2 ====================")
+    print("==================== Fisher Diagnostics Run 2/4 ====================")
 
     # Experiment B: fixed R=1, vary alpha
     expB_root = os.path.join(output_root, "expB_fixed_R1_vary_alpha")
@@ -163,10 +163,46 @@ def main():
         ensure_dir(family_out, clean=True)
 
         run_fisher_diagnostic(
+            steps=[2, 4, 6, 8, 10],
+            num_qubits=5,
             family=family,
             alphas=[0.2, 0.4, 0.6, 0.8, 1.0],
             spreadings=[1],
             output_root=family_out,
+            **common,
+        )
+    
+    print("==================== Fisher Diagnostics Run 3/4 ====================")
+    # Experiment C: fixed R=1, alpha=1.0, vary qubit number
+    expC_root = os.path.join(output_root, "expC_vary_qubits")
+    os.makedirs(expC_root, exist_ok=True)
+
+    for n in range(2, 7):
+        print(f"qubit number: {n}")
+        run_fisher_diagnostic(
+            steps=[2, 4, 6, 8, 10],
+            family="XYZ",
+            num_qubits=n,
+            alphas=[1.0],
+            spreadings=[1],
+            output_root=os.path.join(expC_root, f"{n}_qubits"),
+            **common,
+        )
+    
+    print("==================== Fisher Diagnostics Run 4/4 ====================")
+    # Experiment D: fixed alpha=1.0, vary R and qubit number
+    expD_root = os.path.join(output_root, "expD_diagonalization_vary_qubits_and_R")
+    os.makedirs(expD_root, exist_ok=True)
+
+    for n in range(2, 7):
+        print(f"qubit number: {n}")
+        run_fisher_diagnostic(
+            steps=[1,2],
+            family="XYZ",
+            num_qubits=n,
+            alphas=[1.0],
+            spreadings=[1, 2, 4, 8, 16, 32],
+            output_root=os.path.join(expD_root, f"{n}_qubits"),
             **common,
         )
 

@@ -27,6 +27,14 @@ scaling trajectory to a power law
 The fitted exponent p characterizes the cumulative Fisher-information
 scaling predicted by the theoretical analysis.
 
+In addition to the Fisher trace, the script can also evaluate a scalar
+diagonalization measure of the Fisher matrix,
+
+    eta_diag = ||diag(I)||_F^2 / ||I||_F^2,
+
+which quantifies how strongly the Fisher information is concentrated on
+its diagonal.
+
 This script executes **one diagnostic run** for a single Hamiltonian
 family. Higher-level experiment orchestration (e.g. running multiple
 families or experiment configurations) is handled by the companion
@@ -41,6 +49,7 @@ The diagnostic produces JSON files containing:
 
 • total experiment times T_tot
 • Fisher trace values Tr(I)
+• diagonalization measure eta_diag
 • fitted scaling exponents p
 • experiment metadata
 
@@ -157,6 +166,42 @@ def fisher_trace_from_probs(
 
     return float(fisher_trace.detach().cpu().item())
 
+def fisher_matrix_from_probs(
+    probs: torch.Tensor,
+    param_vec: torch.Tensor,
+    max_outcomes: int = None,
+) -> torch.Tensor:
+    """
+    Compute cumulative classical Fisher matrix
+
+        I_ij = sum_{b,x} (∂_i p_{b,x})(∂_j p_{b,x}) / p_{b,x}
+
+    summed over the batch.
+    """
+    probs = torch.clamp(probs, min=1e-12)
+
+    batch_size, n_outcomes = probs.shape
+    n_params = param_vec.numel()
+
+    if max_outcomes is not None:
+        n_outcomes = min(n_outcomes, max_outcomes)
+
+    fisher = torch.zeros((n_params, n_params), device=probs.device, dtype=torch.float32)
+
+    for b in range(batch_size):
+        for x in range(n_outcomes):
+            p = probs[b, x]
+            grad_p = torch.autograd.grad(
+                p,
+                param_vec,
+                retain_graph=True,
+                create_graph=False,
+                allow_unused=False,
+            )[0]
+            fisher = fisher + torch.outer(grad_p, grad_p) / p
+
+    return fisher
+
 
 def chunked_fisher_trace(
     loss_obj: Loss,
@@ -191,6 +236,69 @@ def chunked_fisher_trace(
             torch.cuda.empty_cache()
 
     return float(total)
+
+def eta_diag_from_fisher(fisher: torch.Tensor) -> float:
+    """
+    Compute diagonalization measure
+
+        eta_diag = sum_i I_ii^2 / sum_{i,j} I_ij^2
+                 = ||diag(I)||_F^2 / ||I||_F^2
+    """
+    diag_sq = torch.sum(torch.diagonal(fisher) ** 2)
+    total_sq = torch.sum(fisher ** 2)
+
+    if total_sq <= 0:
+        return float("nan")
+
+    return float((diag_sq / total_sq).detach().cpu().item())
+
+def chunked_fisher_trace_and_eta(
+    loss_obj: Loss,
+    predictor: ConstantPredictor,
+    times_t: torch.Tensor,
+    init_states: torch.Tensor,
+    basis_indices: torch.Tensor,
+    batch_size: int,
+    max_outcomes: int = None,
+) -> Dict[str, float]:
+    n = times_t.shape[0]
+    total_trace = 0.0
+    total_fisher = None
+
+    for start in range(0, n, batch_size):
+        end = min(start + batch_size, n)
+
+        probs = get_probs_for_batch(
+            loss_obj=loss_obj,
+            predictor=predictor,
+            times_t=times_t[start:end],
+            init_states=init_states[start:end],
+            basis_indices=basis_indices[start:end],
+        )
+
+        fisher_chunk = fisher_matrix_from_probs(
+            probs=probs,
+            param_vec=predictor.flat_params,
+            max_outcomes=max_outcomes,
+        )
+
+        trace_chunk = float(torch.trace(fisher_chunk).detach().cpu().item())
+        total_trace += trace_chunk
+
+        if total_fisher is None:
+            total_fisher = fisher_chunk
+        else:
+            total_fisher = total_fisher + fisher_chunk
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    eta_diag = eta_diag_from_fisher(total_fisher)
+
+    return {
+        "trace_fisher": float(total_trace),
+        "eta_diag": eta_diag,
+    }
 
 
 def fit_power_law(xs: np.ndarray, ys: np.ndarray) -> Dict[str, float]:
@@ -332,6 +440,7 @@ def run_fisher_diagnostic(
         for spreading in spreadings:
             T_vals = []
             F_vals = []
+            eta_vals = []
 
             print(f"\n=== spreading = {spreading} ===")
             for n_steps in steps:
@@ -354,8 +463,8 @@ def run_fisher_diagnostic(
                 times_t = times_t.to(device)
                 basis = basis.to(device)
                 init = init.to(device)
-
-                ftrace = chunked_fisher_trace(
+                
+                fisher_stats = chunked_fisher_trace_and_eta(
                     loss_obj=loss_obj,
                     predictor=predictor,
                     times_t=times_t,
@@ -364,6 +473,28 @@ def run_fisher_diagnostic(
                     batch_size=max_batch,
                     max_outcomes=max_outcomes,
                 )
+
+                ftrace = fisher_stats["trace_fisher"]
+                eta_diag = fisher_stats["eta_diag"]
+
+                print(
+                    f"steps={n_steps:>3d} | T_tot={T_tot:.6f} | "
+                    f"Tr(I)={ftrace:.6e} | eta_diag={eta_diag:.6f}"
+                )
+
+                T_vals.append(T_tot)
+                F_vals.append(ftrace)
+                eta_vals.append(eta_diag)
+
+#                ftrace = chunked_fisher_trace(
+#                    loss_obj=loss_obj,
+#                    predictor=predictor,
+#                    times_t=times_t,
+#                    init_states=init,
+#                    basis_indices=basis,
+#                    batch_size=max_batch,
+#                    max_outcomes=max_outcomes,
+#                )
 
                 print(f"steps={n_steps:>3d} | T_tot={T_tot:.6f} | Val={ftrace:.6e}")
 
@@ -380,6 +511,7 @@ def run_fisher_diagnostic(
                 "n_steps": steps,
                 "T_tot": T_vals,
                 "trace_fisher": F_vals,
+                "eta_diag": eta_vals,
                 "p": fit["p"],
                 "delta_p": fit["delta_p"],
                 "A": fit.get("A"),
