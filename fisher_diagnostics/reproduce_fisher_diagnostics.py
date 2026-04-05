@@ -177,7 +177,7 @@ def main():
     expC_root = os.path.join(output_root, "expC_vary_qubits")
     os.makedirs(expC_root, exist_ok=True)
 
-    for n in range(2, 7):
+    for n in range(2, 8):
         print(f"qubit number: {n}")
         run_fisher_diagnostic(
             steps=[2, 4, 6, 8, 10],
@@ -194,7 +194,7 @@ def main():
     expD_root = os.path.join(output_root, "expD_diagonalization_vary_qubits_and_R")
     os.makedirs(expD_root, exist_ok=True)
 
-    for n in range(2, 7):
+    for n in range(2, 8):
         print(f"qubit number: {n}")
         run_fisher_diagnostic(
             steps=[1,2],

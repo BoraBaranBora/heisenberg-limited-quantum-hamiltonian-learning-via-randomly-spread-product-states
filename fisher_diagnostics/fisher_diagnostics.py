@@ -498,24 +498,33 @@ def run_fisher_diagnostic(
 
                 print(f"steps={n_steps:>3d} | T_tot={T_tot:.6f} | Val={ftrace:.6e}")
 
-                T_vals.append(T_tot)
-                F_vals.append(ftrace)
+                T_arr = np.array(T_vals, dtype=float)
+                F_arr = np.array(F_vals, dtype=float)
 
-            T_arr = np.array(T_vals, dtype=float)
-            F_arr = np.array(F_vals, dtype=float)
-            fit = fit_power_law(T_arr, F_arr)
+            if len(T_arr) > 1:
+                fit = fit_power_law(T_arr, F_arr)
+                print(f"fitted exponent p ≈ {fit['p']:.4f}")
 
-            print(f"fitted exponent p ≈ {fit['p']:.4f}")
+                p_val = fit["p"]
+                delta_p_val = fit["delta_p"]
+                A_val = fit.get("A")
+                r2_val = fit.get("r2")
+            else:
+                print("Skipping power-law fit: need more than one time point.")
+                p_val = None
+                delta_p_val = None
+                A_val = None
+                r2_val = None
             
             results_for_alpha["data"][str(spreading)] = {
                 "n_steps": steps,
                 "T_tot": T_vals,
                 "trace_fisher": F_vals,
                 "eta_diag": eta_vals,
-                "p": fit["p"],
-                "delta_p": fit["delta_p"],
-                "A": fit.get("A"),
-                "r2": fit.get("r2"),
+                "p": p_val,
+                "delta_p": delta_p_val,
+                "A": A_val,
+                "r2": r2_val,
             }
 
         all_results["alphas"][str(alpha)] = results_for_alpha
