@@ -171,9 +171,9 @@ plt.rcParams.update({
     "font.size": 20,
     "axes.labelsize": 20,
     "axes.titlesize": 20,
-    "xtick.labelsize": 18,
-    "ytick.labelsize": 18,
-    "legend.fontsize": 18,
+    "xtick.labelsize": 16,
+    "ytick.labelsize": 16,
+    "legend.fontsize": 15,
     "lines.linewidth": 2,
     "lines.markersize": 8,
     "figure.dpi": 100,
@@ -651,7 +651,7 @@ def plot_trace_vs_time_for_varying_qubits(
     ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
     ax.legend(fontsize=12)
     fig.tight_layout()
-    plt.savefig("Figure_FisherTraceScaling_vary_qubits.png", dpi=200)
+    #plt.savefig("Figure_FisherTraceScaling_vary_qubits.png", dpi=200)
     plt.show()
     
 def extract_eta_vs_R(
@@ -753,7 +753,7 @@ def plot_eta_diag_vs_R_for_varying_qubits(
     ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
     ax.legend(fontsize=12)
     fig.tight_layout()
-    plt.savefig("Figure_FisherDiagonalization_vs_R.png", dpi=200)
+    #plt.savefig("Figure_FisherDiagonalization_vs_R.png", dpi=200)
     plt.show()
 
 def load_qubit_sweep_results_for_family(data_dir: str, family: str) -> Dict[int, Dict[str, Any]]:
