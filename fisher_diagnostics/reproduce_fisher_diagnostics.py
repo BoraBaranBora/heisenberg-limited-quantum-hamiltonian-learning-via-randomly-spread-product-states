@@ -124,7 +124,6 @@ def main():
 
     common = dict(
         delta_t=0.01,
-        measurements=25,
         shots=1,
         seed=99901,
         max_batch=16,
@@ -145,6 +144,7 @@ def main():
         run_fisher_diagnostic(
             steps=[2, 4, 6, 8, 10],
             num_qubits=5,
+            measurements=25,
             family=family,
             alphas=[1.0],
             spreadings=[1, 2, 4, 8, 16],
@@ -165,6 +165,7 @@ def main():
         run_fisher_diagnostic(
             steps=[2, 4, 6, 8, 10],
             num_qubits=5,
+            measurements=25,
             family=family,
             alphas=[0.2, 0.4, 0.6, 0.8, 1.0],
             spreadings=[1],
@@ -182,6 +183,7 @@ def main():
         run_fisher_diagnostic(
             steps=[2, 4, 6, 8, 10],
             family="XYZ",
+            measurements=25,
             num_qubits=n,
             alphas=[1.0],
             spreadings=[1],
@@ -199,9 +201,10 @@ def main():
         run_fisher_diagnostic(
             steps=[1,2],
             family="XYZ",
+            measurements=25,
             num_qubits=n,
             alphas=[1.0],
-            spreadings=[1, 2, 4, 8, 16, 32],
+            spreadings=[1, 2, 4, 8, 16, 32, 64, 128],
             output_root=os.path.join(expD_root, f"{n}_qubits"),
             **common,
         )
