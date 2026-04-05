@@ -202,41 +202,6 @@ def fisher_matrix_from_probs(
 
     return fisher
 
-
-def chunked_fisher_trace(
-    loss_obj: Loss,
-    predictor: ConstantPredictor,
-    times_t: torch.Tensor,
-    init_states: torch.Tensor,
-    basis_indices: torch.Tensor,
-    batch_size: int,
-    max_outcomes: int = None,
-) -> float:
-    n = times_t.shape[0]
-    total = 0.0
-
-    for start in range(0, n, batch_size):
-        end = min(start + batch_size, n)
-
-        probs = get_probs_for_batch(
-            loss_obj=loss_obj,
-            predictor=predictor,
-            times_t=times_t[start:end],
-            init_states=init_states[start:end],
-            basis_indices=basis_indices[start:end],
-        )
-
-        total += fisher_trace_from_probs(
-            probs=probs,
-            param_vec=predictor.flat_params,
-            max_outcomes=max_outcomes,
-        )
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
-    return float(total)
-
 def eta_diag_from_fisher(fisher: torch.Tensor) -> float:
     """
     Compute diagonalization measure
@@ -485,16 +450,6 @@ def run_fisher_diagnostic(
                 T_vals.append(T_tot)
                 F_vals.append(ftrace)
                 eta_vals.append(eta_diag)
-
-#                ftrace = chunked_fisher_trace(
-#                    loss_obj=loss_obj,
-#                    predictor=predictor,
-#                    times_t=times_t,
-#                    init_states=init,
-#                    basis_indices=basis,
-#                    batch_size=max_batch,
-#                    max_outcomes=max_outcomes,
-#                )
 
                 print(f"steps={n_steps:>3d} | T_tot={T_tot:.6f} | Val={ftrace:.6e}")
 
