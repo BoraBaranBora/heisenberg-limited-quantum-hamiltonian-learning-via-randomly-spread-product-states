@@ -67,6 +67,23 @@ The script produces three diagnostic plots:
 
    Data from all Hamiltonian families are shown together.
 
+4. **Scaling behaviour vs qubit number and spread-state ensemble size**
+
+   Uses datasets where both the system size (number of qubits) and the
+   spread-state ensemble size
+
+       R
+
+   are varied simultaneously while keeping
+
+       α = 1.0
+
+   fixed.
+
+   This experiment is used to study how the Fisher-information diagnostics
+   behave as the Hilbert-space dimension grows and larger spread-state
+   ensembles are used.
+
 Data discovery
 --------------
 
