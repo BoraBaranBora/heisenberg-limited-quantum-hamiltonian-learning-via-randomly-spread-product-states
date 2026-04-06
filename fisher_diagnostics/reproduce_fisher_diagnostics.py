@@ -112,7 +112,7 @@ Optionally specify:
 
 Example:
 
-    python plot_fisher_diagnostics.py --family XYZ
+    python plot_reproduction_fisher_diagnostics.py 
 
 Notes
 -----
