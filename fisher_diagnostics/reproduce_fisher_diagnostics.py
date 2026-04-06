@@ -199,9 +199,9 @@ def main():
     for n in range(2, 8):
         print(f"qubit number: {n}")
         run_fisher_diagnostic(
-            steps=[1,2],
+            steps=[1],
             family="XYZ",
-            measurements=25,
+            measurements=10,
             num_qubits=n,
             alphas=[1.0],
             spreadings=[1, 2, 4, 8, 16, 32, 64, 128],
