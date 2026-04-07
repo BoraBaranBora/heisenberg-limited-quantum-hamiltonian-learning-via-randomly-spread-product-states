@@ -451,7 +451,7 @@ def run_fisher_diagnostic(
                 F_vals.append(ftrace)
                 eta_vals.append(eta_diag)
 
-                print(f"steps={n_steps:>3d} | T_tot={T_tot:.6f} | Val={ftrace:.6e}")
+                #print(f"steps={n_steps:>3d} | T_tot={T_tot:.6f} | Val={ftrace:.6e}")
 
                 T_arr = np.array(T_vals, dtype=float)
                 F_arr = np.array(F_vals, dtype=float)
