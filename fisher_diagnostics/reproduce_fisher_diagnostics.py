@@ -134,7 +134,7 @@ from fisher_diagnostics import run_fisher_diagnostic
 
 RUN_EXPERIMENT_A = False   # fixed alpha, vary R
 RUN_EXPERIMENT_B = False   # fixed R=1, vary alpha
-RUN_EXPERIMENT_C = True   # vary qubit number
+RUN_EXPERIMENT_C = False   # vary qubit number
 RUN_EXPERIMENT_D = True   # vary qubit number and R
 
 # ============================================================
@@ -155,7 +155,7 @@ def main():
         delta_t=0.01,
         shots=1,
         seed=99901,
-        max_batch=16,
+        max_batch=1,
         max_outcomes=None,
     )
 
@@ -218,13 +218,13 @@ def main():
         expC_root = os.path.join(output_root, "expC_vary_qubits")
         os.makedirs(expC_root, exist_ok=True)
 
-        for n in range(2, 9):
+        for n in range(2, 7):
             print(f"qubit number: {n}")
 
             run_fisher_diagnostic(
                 steps=[2, 4, 6, 8, 10],
                 family="XYZ",
-                measurements=25,
+                measurements=5,
                 num_qubits=n,
                 alphas=[1.0],
                 spreadings=[1],
@@ -243,13 +243,13 @@ def main():
         )
         os.makedirs(expD_root, exist_ok=True)
 
-        for n in range(2, 9):
+        for n in range(2, 7):
             print(f"qubit number: {n}")
 
             run_fisher_diagnostic(
                 steps=[1],
                 family="XYZ",
-                measurements=10,
+                measurements=1,
                 num_qubits=n,
                 alphas=[1.0],
                 spreadings=[1, 2, 4, 8, 16, 32, 64, 128],
