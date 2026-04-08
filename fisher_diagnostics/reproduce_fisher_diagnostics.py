@@ -132,9 +132,9 @@ from fisher_diagnostics import run_fisher_diagnostic
 # Select which experiments to run
 # ============================================================
 
-RUN_EXPERIMENT_A = False   # fixed alpha, vary R
-RUN_EXPERIMENT_B = False   # fixed R=1, vary alpha
-RUN_EXPERIMENT_C = False   # vary qubit number
+RUN_EXPERIMENT_A = True   # fixed alpha, vary R
+RUN_EXPERIMENT_B = True   # fixed R=1, vary alpha
+RUN_EXPERIMENT_C = True   # vary qubit number
 RUN_EXPERIMENT_D = True   # vary qubit number and R
 
 # ============================================================
