@@ -159,7 +159,7 @@ def main():
         max_outcomes=None,
     )
 
-    families = ["XYZ", "XYZ2", "XYZ3", "XXYGL"]
+    families = ["XYZ", "XYZ2", "XYZ3", "XXZ"]
 
     # ========================================================
     # Experiment A: fixed alpha, vary R

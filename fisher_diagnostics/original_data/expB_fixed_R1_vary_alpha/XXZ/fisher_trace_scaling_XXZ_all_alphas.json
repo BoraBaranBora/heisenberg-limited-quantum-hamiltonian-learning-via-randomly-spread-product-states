@@ -1,5 +1,5 @@
 {
-  "family": "XXYGL",
+  "family": "XXZ",
   "num_qubits": 5,
   "delta_t": 0.01,
   "measurements": 25,
@@ -15,7 +15,7 @@
     1
   ],
   "hamiltonian_params": {
-    "base_family": "XXYGL",
+    "base_family": "XXZ",
     "include_higher_order": 0,
     "J": [
       [
